@@ -6,6 +6,7 @@ def parse_plays(playfile):
 	with open(playfile) as file:
 		reader = csv.DictReader(file)
 		for row in reader:
+			print(row)
 
 
 if __name__ == "__main__" :
