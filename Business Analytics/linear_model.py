@@ -1,4 +1,5 @@
 import pandas as pd 
+import numpy as np
 import statsmodels.api as sm
 from sklearn.model_selection import KFold
 
@@ -27,20 +28,33 @@ df['Seconds'] = df['Created'].dt.hour * 3600 + df['Created'].dt.minute * 60 + df
 df = df.drop(['Description'], axis = 1, inplace = False)
 df = df.drop(['Created'], axis = 1, inplace = False)
 df = df.drop(['Weekday'], axis = 1, inplace = False)
+df = df.drop(['Followers at Posting'], axis = 1, inplace = False)
+
 
 #Dealing with categorical variable 'Type': dropping one dummy to prevent multicolinearity
 df = pd.get_dummies(df, drop_first = True) 
-df = df.join(Weekday_dummy)
+#df = df.join(Weekday_dummy)
+df = df.drop(['Type_Photo'], axis = 1, inplace=False)
 
 #OLS (and probably better models in the future)
-Y = df.iloc[:, 0]
+y = df.iloc[:, 0]
 X = df.iloc[:, 1:21]
 X = sm.add_constant(X)
-results = sm.OLS(Y, X).fit()
-print(results.summary())
+model = sm.OLS(y, X).fit()
+print(model.summary())
 
 #cross validation 
-
+MAPE = [] #mean absolute percentage error
+cv = KFold(n_splits = 10, shuffle=True)
+for train_index, test_index in cv.split(X, y):
+    n = len(test_index)
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+    results = sm.OLS(y_train, X_train).fit()
+    predictions = results.predict(X_test)
+    MAPE.append(1/n * sum(abs((y_test - predictions)/y_test)))
+    
+print(np.mean(MAPE))
 
 
 
