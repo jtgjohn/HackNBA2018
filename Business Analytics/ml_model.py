@@ -10,7 +10,8 @@ def norm(x):
 	x_stats = x_stats.transpose()
 	return (x - x_stats['mean']) / x_stats['std']
 
-allstars = ["@kingjames", "LeBron"]
+teams = ["@raptors", "@warriors", "@nuggets", "@okcthunder", "@pelicansnba", "@dallasmavs", "@hornets", "@lakers", "@nyknicks", "@timberwolves", "@laclippers", "@orlandomagic", "@pacers", "@cavs", "@houstonrockets", "@brooklynnets", "@suns", "@spurs", "@utahjazz", "@celtics", "@atlhawks", "@detroitpistons", "@chicagobulls", "@sixers", "@bucks", "@washwizards", "@miamiheat", "@memgrizz", "@trailblazers", "@sacramentokings"]
+players = ["@kingjames", "@stephencurry30", "@kyrieirving", "@dwyanewade", "@russwest44", "@cp3", "@jharden13", "@ygtrece", "@carmeloanthony", "@klaythompson", "@damianlillard"]
 
 #loading data
 df = pd.read_csv('training_set.csv', encoding = 'latin1') 
@@ -22,17 +23,29 @@ df['Seconds'] = df['Created'].dt.hour * 3600 + df['Created'].dt.minute * 60 + df
 df['Month'] = df['Created'].dt.month_name()
 df['Weekday'] = df['Created'].dt.day_name()
 
-#LeBron Factor 
-lebron_mentions = np.zeros((n, 1))
+#Top Team Instagram Followers
+team_mentions = np.zeros((n, len(teams)))
 row_counter = 0
 for index, row in df.iterrows():
-	for player in allstars:
+	for team in teams:
+		if str(team) in str(row['Description']):
+			team_mentions[row_counter, teams.index(team)] = 1
+		else: 
+			continue
+	row_counter += 1
+team_dummy = pd.DataFrame(data=team_mentions, columns=teams)
+
+#Top Player Instagram Followers
+player_mentions = np.zeros((n, len(players)))
+row_counter = 0
+for index, row in df.iterrows():
+	for player in players:
 		if str(player) in str(row['Description']):
-			lebron_mentions[row_counter, 0] = 1
+			player_mentions[row_counter, players.index(player)] = 1
 		else:
 			continue
 	row_counter += 1
-lebron_dummy = pd.DataFrame(data=lebron_mentions, columns=["LeBron"])
+player_dummy = pd.DataFrame(data=player_mentions, columns=players)
 
 
 #quantitative regressors
@@ -46,7 +59,8 @@ month_dummy = pd.get_dummies(df['Month'])
 weekday_dummy = pd.get_dummies(df['Weekday'])
 dummies = type_dummy.join(month_dummy)
 dummies = dummies.join(weekday_dummy)
-dummies = dummies.join(lebron_dummy)
+dummies = dummies.join(player_dummy)
+dummies = dummies.join(team_dummy)
 
 X = dummies.join(seconds)
 X = X.join(followers)
@@ -103,5 +117,7 @@ print(type(test_labelnp))
 MAPE = sum(abs((test_predictions - test_labelnp)/test_labelnp)) * 1/n
 
 print("Mean average percentage error: " + str(MAPE))
+
+
 
 

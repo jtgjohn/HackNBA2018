@@ -14,10 +14,12 @@ def spline_transform(seconds, followers, dummies):
 	return X
 
 teams = ["@raptors", "@warriors", "@nuggets", "@okcthunder", "@pelicansnba", "@dallasmavs", "@hornets", "@lakers", "@nyknicks", "@timberwolves", "@laclippers", "@orlandomagic", "@pacers", "@cavs", "@houstonrockets", "@brooklynnets", "@suns", "@spurs", "@utahjazz", "@celtics", "@atlhawks", "@detroitpistons", "@chicagobulls", "@sixers", "@bucks", "@washwizards", "@miamiheat", "@memgrizz", "@trailblazers", "@sacramentokings"]
-allstars = ["LeBron", "@kingjames", "@jharden13", "@Kyrie Irving", "kawhi", "@antdavis23","@bensimmons","@damianlillard","@dwyanewade","@karltowns","@klaythompson","@giannis_an34","@stephencurry30","@joelembiid","@ygtrece","Kemba","@blakegriffin23","@dloading","Dirk", "@swish41", "Jokic","oladipo","@russwest44","@kporzee","@johnwall", "@demar_derozan","@money23green","@easymoneysniper","@jimmybutler","@isaiahthomas","@carmeloanthony"]
+allstars = ["LeBron", "@kingjames", "@jharden13", "@kyrieirving", "kawhi", "@antdavis23","@bensimmons","@damianlillard","@dwyanewade","@karltowns","@klaythompson","@giannis_an34","@stephencurry30","@joelembiid","@ygtrece","@_kw15","@blakegriffin23","@dloading","Dirk", "@swish41", "Jokic","oladipo","@russwest44","@kporzee","@johnwall", "@demar_derozan","@money23green","@easymoneysniper","@jimmybutler","@isaiahthomas","@carmeloanthony"]
 
 #loading data
-df = pd.read_csv('training_set.csv', encoding = 'latin1') 
+data = pd.read_csv('training_set.csv', encoding = 'latin1') 
+
+df = data.copy()
 
 n = len(df)
 
@@ -124,6 +126,8 @@ for train_index, test_index in cv.split(X, y):
     
 
 print("Spline Regression: " + str(np.mean(MAPE_spline)))
+
+print(data.head(5))
 
     
 
