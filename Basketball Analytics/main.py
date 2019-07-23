@@ -122,15 +122,42 @@ def parse_event_codes(codefile):
 			if first:
 				first = False
 				continue
-			line = line.split()
+			line = line.split('\t')
 			etype = int(line[0])
 			action = int(line[1])
-			msg = line[2].strip("\"")
-			desc = line[3].strip("\"")
+			msg = line[2].strip().strip("\"")
+			desc = line[3].strip().strip("\"")
 			if etype not in codedict:
 				codedict[etype] = dict()
 			codedict[etype][action] = (msg, desc)
 	return codedict
+
+def getposs(playerteams, game, player, event):
+	if game not in playerteams:
+		playerteams[game] = dict()
+	if player not in playerteams[game]:
+		playerteams[game][player] = event.team_id
+	return playerteams[game][player]
+
+def addrtg(ratings, game, player, pts, off):
+	if game not in ratings:
+		ratings[game] = dict()
+	if player not in ratings[game]:
+		ratings[game][player] = [0] * 4
+	if off:
+		ratings[game][player][0] += pts
+	else:
+		ratings[game][player][1] += pts
+
+def addposs(ratings, game, player, off):
+	if game not in ratings:
+		ratings[game] = dict()
+	if player not in ratings[game]:
+		ratings[game][player] = [0] * 4
+	if off:
+		ratings[game][player][2] += 1
+	else:
+		ratings[game][player][3] += 1
 
 
 def calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes):
@@ -157,48 +184,42 @@ def calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes):
 			event_msg, event_desc = event_codes[event.event_type][event.action]
 			event_msg = event_msg.lower()
 			event_desc = event_desc.lower()
-
+			print(event_msg)
 
 			if "jump ball" in event_msg:
 				newposs = event.team_id
 			elif "made shot" in event_msg:
 				pts = event.option1
-				team = playerteams[game][event.person1]
+				team = getposs(playerteams, game, event.person1, event)
 				for t in activeset.get_players():
 					for player in activeset.get_players()[t]:
 						if t == team:
-							ratings[game][player][0] += pts
+							addrtg(ratings, game, player, pts, True)
 						else:
-							ratings[game][player][1] += pts
+							addrtg(ratings, game, player, pts, False)
 							newposs = t
 			elif "free throw" in event_msg:
 				freethrow = True
 				if event.option1 == 1:
-					team = playerteams[game][event.person1]
+					team = getposs(playerteams, game, event.person1, event)
 					for t in activeset.get_players():
 						for player in activeset.get_players()[t]:
-							if t == team:
-								ratings[game][player][0] += 1
-							else:
-								ratings[game][player][1] += 1
+							addrtg(ratings, game, player, 1, t == team)
 			elif "substitution" in event_msg:
 				if freethrow:
 					freethrowsubs.append((event.person1, event.person2))
 				else:
 					activeset.substitution(event.person2, event.person1)
 			elif "rebound" in event_msg:
-				newposs = playerteams[game][event.person1]
+				newposs = getposs(playerteams, game, event.person1, event)
 			elif "turnover" in event_msg:
-				newposs = oppteams[playerteams[game][event.person1]]
+				newposs = oppteams[getposs(playerteams, game, event.person1, event)]
 
 			if oldposs != None and oldposs != newposs:
 				for team in activeset.get_players():
 					for team in activeset.get_players()[team]:
-						if team == oldposs:
-							ratings[game][player][2] += 1
-						else:
-							ratings[game][player][3] += 1
-				oldposs = newposs
+						addposs(ratings, game, player, team == oldposs)
+			oldposs = newposs
 
 			if freethrow and "free throw" in event_msg and ("1 of 2" not in event_desc or "1 of 3" not in event_desc or "2 of 3" not in event_desc):
 				freethrow = False
@@ -214,8 +235,12 @@ def write_csv(ratings, filename):
 		writer.writeheader()
 		for game in ratings:
 			for player in ratings[game]:
-				offrtg = (ratings[game][player][0]/ratings[game][player][2])*100
-				defrtg = (ratings[game][player][1]/ratings[game][player][3])*100
+				offrtg = 0
+				if ratings[game][player][2] != 0:
+					offrtg = (ratings[game][player][0]/ratings[game][player][2])*100
+				defrtg = 0
+				if ratings[game][player][3] != 0:
+					defrtg = (ratings[game][player][1]/ratings[game][player][3])*100
 				writer.writerow({"Game_ID":game, "Player_ID":player, "OffRtg":offrtg, "DefRtg":defrtg})
 
 
@@ -246,6 +271,7 @@ if __name__ == "__main__" :
 			ratings[game][player] = [0] * 4
 
 	calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes)
+	print(ratings)
 	write_csv(ratings, outfile)
 
 
