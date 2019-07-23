@@ -1,5 +1,6 @@
-import math
-import numpy as np
+import csv
+
+
 
 class Event(object):
 
@@ -48,7 +49,7 @@ class ActiveSet(object):
 
 	def start_period(self, period):
 		for team in self.active:
-			active[team].clear()
+			self.active[team].clear()
 		for player in self.lineup[period]:
 			team = self.playerteams[player]
 			self.active[team].add(player)
@@ -128,7 +129,7 @@ def parse_event_codes(codefile):
 			desc = line[3].strip("\"")
 			if etype not in codedict:
 				codedict[etype] = dict()
-			codedict[etype][action] = msg
+			codedict[etype][action] = (msg, desc)
 	return codedict
 
 
@@ -141,27 +142,88 @@ def calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes):
 		freethrow = False
 		freethrowsubs = []
 		activeset = ActiveSet(playerteams, game, lineupdict)
+
+		# set up 2 way dict to easily get one team by knowing the other
+		oppteams = dict()
+		for team in activeset.get_players():
+			for t in activeset.get_players():
+				if t != team : oppteams[team] = t
+
 		for event in playdict[game]:
 			if period < event.period:
+				oldposs = None
 				period = event.period
 				activeset.start_period(period)
-			event_msg = event_codes[event.event_type][event.action].lower()
+			event_msg, event_desc = event_codes[event.event_type][event.action]
+			event_msg = event_msg.lower()
+			event_desc = event_desc.lower()
 
-			if freethrow and "free throw" not in event_msg:
+
+			if "jump ball" in event_msg:
+				newposs = event.team_id
+			elif "made shot" in event_msg:
+				pts = event.option1
+				team = playerteams[event.person1]
+				for t in activeset.get_players():
+					for player in activeset.get_players()[t]:
+						if t == team:
+							ratings[game][player][0] += pts
+						else:
+							ratings[game][player][1] += pts
+							newposs = t
+			elif "free throw" in event_msg:
+				freethrow = True
+				if event.option1 == 1:
+					team = playerteams[event.person1]
+					for t in activeset.get_players():
+						for player in activeset.get_players()[t]:
+							if t == team:
+								ratings[game][player][0] += 1
+							else:
+								ratings[game][player][1] += 1
+			elif "substitution" in event_msg:
+				if freethrow:
+					freethrowsubs.append((event.person1, event.person2))
+				else:
+					activeset.substitution(event.person2, event.person1)
+			elif "rebound" in event_msg:
+				newposs = playerteams[event.person1]
+			elif "turnover" in event_msg:
+				newposs = oppteams[playerteams[event.person1]]
+
+			if oldposs != None and oldposs != newposs:
+				for team in activeset.get_players():
+					for team in activeset.get_players()[team]:
+						if team == oldposs:
+							ratings[game][player][2] += 1
+						else:
+							ratings[game][player][3] += 1
+				oldposs = newposs
+
+			if freethrow and "free throw" in event_msg and ("1 of 2" not in event_desc or "1 of 3" not in event_desc or "2 of 3" not in event_desc):
 				freethrow = False
 				for subout, subin in freethrowsubs:
 					activeset.substitution(subin, subout)
 
-			if "jump ball" in event_msg:
-				newposs = event.team_id
-			if "made shot" in event_msg:
 
+def write_csv(ratings, filename):
+	with open(filename, "w") as file:
+		fieldnames = ["Game_ID", "Player_ID", "OffRtg", "DefRtg"]
+		writer = csv.DictWriter(file, fieldnames=fieldnames)
+
+		writer.writeheader()
+		for game in ratings:
+			for player in ratings[game]:
+				offrtg = (ratings[game][player][0]/ratings[game][player][2])*100
+				defrtg = (ratings[game][player][1]/ratings[game][player][3])*100
+				writer.writerow({"Game_ID":game, "Player_ID":player, "OffRtg":offrtg, "DefRtg":defrtg})
 
 
 if __name__ == "__main__" :
 	playfile = "Play_by_Play.txt"
 	lineupfile = "Game_Lineup.txt"
 	codefile = "Event_Codes.txt"
+	outfile = "Guardians_Q1_BBALL.csv"
 	playdict = parse_plays(playfile)
 	for game in playdict:
 		playdict[game].sort()
@@ -176,14 +238,15 @@ if __name__ == "__main__" :
 	# lineupdict[game][period] = [players]
 	# playdict[game] = [Events]
 	# playerteams[game][player] = team
-	# event_codes[type][action] = msg
+	# event_codes[type][action] = (msg, desc)
 	ratings = dict() #dict to hold all output info
 	for game in gameset:
 		ratings[game] = dict()
 		for player in playerteams:
 			ratings[game][player] = [0] * 4
 
-	calc_ratings(ratings, playdict, playerteams, lineupdict)
+	calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes)
+	write_csv(ratings, outfile)
 
 
 
