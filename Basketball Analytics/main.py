@@ -163,7 +163,7 @@ def calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes):
 				newposs = event.team_id
 			elif "made shot" in event_msg:
 				pts = event.option1
-				team = playerteams[event.person1]
+				team = playerteams[game][event.person1]
 				for t in activeset.get_players():
 					for player in activeset.get_players()[t]:
 						if t == team:
@@ -174,7 +174,7 @@ def calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes):
 			elif "free throw" in event_msg:
 				freethrow = True
 				if event.option1 == 1:
-					team = playerteams[event.person1]
+					team = playerteams[game][event.person1]
 					for t in activeset.get_players():
 						for player in activeset.get_players()[t]:
 							if t == team:
@@ -187,9 +187,9 @@ def calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes):
 				else:
 					activeset.substitution(event.person2, event.person1)
 			elif "rebound" in event_msg:
-				newposs = playerteams[event.person1]
+				newposs = playerteams[game][event.person1]
 			elif "turnover" in event_msg:
-				newposs = oppteams[playerteams[event.person1]]
+				newposs = oppteams[playerteams[game][event.person1]]
 
 			if oldposs != None and oldposs != newposs:
 				for team in activeset.get_players():
