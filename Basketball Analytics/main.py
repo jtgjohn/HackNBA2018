@@ -49,7 +49,7 @@ class ActiveSet(object):
 
 	def start_period(self, period):
 		for team in self.active:
-			self.active[team].clear()
+			self.active[team].clear() #clearing the previous periods active set 
 		for player in self.lineup[period]:
 			team = self.playerteams[player]
 			self.active[team].add(player)
@@ -58,17 +58,8 @@ class ActiveSet(object):
 		self.active[self.playerteams[subout]].remove(subout)
 		self.active[self.playerteams[subin]].add(subin)
 
-	def get_players(self):
-		return self.active
-
-	def remove(self, remset):
-		for player in remset:
-			self.active[playerteams[player]].remove(player)
-
-	def add(self, remset):
-		for player in remset:
-			self.active[playerteams[player]].add(player)
-
+	def get_players(self): 
+		return self.active 
 
 def parse_plays(playfile):
 	playdict = dict()
@@ -79,7 +70,7 @@ def parse_plays(playfile):
 				first = False
 				continue
 			line = line.split()
-			game = line[0].strip("\"")
+			game = line[0].strip("\"") 
 			if game not in playdict:
 				playdict[game] = []
 			playdict[game].append(Event(line[1:]))
@@ -102,7 +93,7 @@ def parse_games(gamefile, gameset, playerteams):
 
 			if game not in infodict:
 				infodict[game] = dict()
-			if 'A' in status.upper(): # active players only
+			if 'A' in status.upper(): 
 				if period not in infodict[game]:
 					infodict[game][period] = []
 				infodict[game][period].append(player)
@@ -114,7 +105,7 @@ def parse_games(gamefile, gameset, playerteams):
 			gameset.add(game)
 	return infodict
 
-def parse_event_codes(codefile):
+def parse_event_codes(codefile): 
 	codedict = dict()
 	first = True
 	with open(codefile) as file:
@@ -122,7 +113,7 @@ def parse_event_codes(codefile):
 			if first:
 				first = False
 				continue
-			line = line.split('\t')
+			line = line.split('\t') 
 			etype = int(line[0])
 			action = int(line[1])
 			msg = line[2].strip().strip("\"")
@@ -138,6 +129,7 @@ def getposs(playerteams, game, player, event):
 	if player not in playerteams[game]:
 		playerteams[game][player] = event.team_id
 	return playerteams[game][player]
+
 
 def addrtg(ratings, game, player, pts, off):
 	if game not in ratings:
@@ -217,7 +209,7 @@ def calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes):
 
 			if oldposs != None and oldposs != newposs:
 				for team in activeset.get_players():
-					for team in activeset.get_players()[team]:
+					for player in activeset.get_players()[team]:
 						addposs(ratings, game, player, team == oldposs)
 			oldposs = newposs
 
@@ -267,7 +259,7 @@ if __name__ == "__main__" :
 	ratings = dict() #dict to hold all output info
 	for game in gameset:
 		ratings[game] = dict()
-		for player in playerteams:
+		for player in playerteams[game]:
 			ratings[game][player] = [0] * 4
 
 	calc_ratings(ratings, playdict, playerteams, lineupdict, event_codes)
